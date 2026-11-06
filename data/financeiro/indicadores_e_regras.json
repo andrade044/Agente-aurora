@@ -1,0 +1,37 @@
+{
+  "nome_empresa": "Aurora Serviços Digitais S.A. (empresa fictícia)",
+  "moeda": "BRL",
+  "periodo_dados": {
+    "inicio": "2025-01-01",
+    "fim": "2026-12-31"
+  },
+  "indicadores_exemplo": [
+    {
+      "nome": "Receita líquida",
+      "definicao": "Receitas registradas menos deduções registradas, quando disponíveis.",
+      "unidade": "BRL"
+    },
+    {
+      "nome": "Despesas operacionais",
+      "definicao": "Soma dos lançamentos do tipo Despesa no período filtrado.",
+      "unidade": "BRL"
+    },
+    {
+      "nome": "Execução orçamentária",
+      "definicao": "Despesas realizadas divididas pelo orçamento aprovado do mesmo período e centro de custo.",
+      "unidade": "percentual"
+    },
+    {
+      "nome": "Inadimplência de recebíveis",
+      "definicao": "Receitas com status Atrasado divididas pelo total de receitas registradas.",
+      "unidade": "percentual"
+    }
+  ],
+  "regras_calculo": [
+    "Somar valor_brl somente após converter para número decimal.",
+    "Para despesas realizadas, filtrar tipo=Despesa e status=Pago quando a pergunta pedir valores efetivamente pagos.",
+    "Para despesas incorridas, considerar todos os status de lançamentos do tipo Despesa, deixando explícito o critério.",
+    "Não confundir data_competencia com data_vencimento.",
+    "Todos os registros são fictícios e não representam uma empresa real."
+  ]
+}

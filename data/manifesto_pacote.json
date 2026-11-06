@@ -1,0 +1,30 @@
+{
+  "pacote": "Bases sintéticas para desafio de agentes de IA",
+  "empresa_ficticia": "Aurora Serviços Digitais S.A.",
+  "bases": {
+    "financeiro": {
+      "lancamentos": 300,
+      "orcamentos": 144,
+      "formatos": [
+        "CSV",
+        "JSON"
+      ]
+    },
+    "informacoes_internas": {
+      "documentos_markdown": 10,
+      "faq_itens": 7,
+      "formatos": [
+        "Markdown",
+        "JSON"
+      ]
+    },
+    "ouvidoria": {
+      "manifestacoes": 180,
+      "formatos": [
+        "CSV",
+        "JSON"
+      ]
+    }
+  },
+  "aviso": "Todos os dados são sintéticos e não representam registros reais."
+}

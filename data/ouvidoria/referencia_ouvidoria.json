@@ -1,0 +1,35 @@
+{
+  "dominio": "ouvidoria",
+  "empresa": "Aurora Serviços Digitais S.A. (fictícia)",
+  "protocolo_format": "OUV-NNNN",
+  "status_validos": [
+    "Aberto",
+    "Em análise",
+    "Aguardando área responsável",
+    "Respondido",
+    "Concluído"
+  ],
+  "prioridades_validas": [
+    "Baixa",
+    "Média",
+    "Alta",
+    "Crítica"
+  ],
+  "categorias": [
+    "Cobrança",
+    "Atendimento",
+    "Produto ou serviço",
+    "Cancelamento",
+    "Reembolso",
+    "Privacidade",
+    "Elogio",
+    "Sugestão"
+  ],
+  "regras": [
+    "Nunca inventar um protocolo. Se não houver correspondência exata, informar que não foi encontrado.",
+    "Não inferir identidade do manifestante; a base não contém nomes, CPF, e-mail ou telefone.",
+    "O prazo de referência de 10 dias é um parâmetro fictício para demonstração, não prazo legal ou promessa real.",
+    "Diferenciar data de abertura de data de resposta.",
+    "Status Respondido não é necessariamente igual a Concluído."
+  ]
+}

@@ -1,0 +1,89 @@
+{
+  "descricao": "Casos de teste manuais para o roteador e os agentes. Valores esperados são baseados nos arquivos deste pacote.",
+  "casos": [
+    {
+      "id": "T001",
+      "pergunta": "Como solicito férias?",
+      "dominio_esperado": "informacoes_internas",
+      "fonte_esperada": "01_politica_ferias.md",
+      "criterio": "Resposta menciona portal interno e antecedência de 30 dias corridos."
+    },
+    {
+      "id": "T002",
+      "pergunta": "Qual o prazo para pedir reembolso?",
+      "dominio_esperado": "informacoes_internas",
+      "fonte_esperada": "02_politica_reembolso.md",
+      "criterio": "Resposta menciona 10 dias corridos e comprovante."
+    },
+    {
+      "id": "T003",
+      "pergunta": "Quais são as aprovações para uma compra de R$ 12.000?",
+      "dominio_esperado": "informacoes_internas",
+      "fonte_esperada": "03_aprovacao_de_compras.md",
+      "criterio": "Resposta inclui liderança, gerente e diretoria."
+    },
+    {
+      "id": "T004",
+      "pergunta": "Existe o protocolo OUV-9999?",
+      "dominio_esperado": "ouvidoria",
+      "fonte_esperada": "manifestacoes.csv",
+      "criterio": "Informar não encontrado; não inventar dados."
+    },
+    {
+      "id": "T005",
+      "pergunta": "Quais status podem aparecer na ouvidoria?",
+      "dominio_esperado": "ouvidoria",
+      "fonte_esperada": "referencia_ouvidoria.json",
+      "criterio": "Listar apenas os status enumerados no arquivo."
+    },
+    {
+      "id": "T006",
+      "pergunta": "Quanto foi gasto em despesas pagas no período de janeiro a março de 2025?",
+      "dominio_esperado": "financeiro",
+      "fonte_esperada": "lancamentos_financeiros.csv",
+      "criterio": "Calcular via SQL/Python, filtrar tipo=Despesa, status=Pago e competência no período."
+    },
+    {
+      "id": "T007",
+      "pergunta": "Qual departamento tem maior orçamento em janeiro de 2026?",
+      "dominio_esperado": "financeiro",
+      "fonte_esperada": "orcamento_mensal.csv",
+      "criterio": "Comparar os valores de orçamento do mês, sem usar o modelo para estimar."
+    },
+    {
+      "id": "T008",
+      "pergunta": "Como reporto um e-mail de phishing?",
+      "dominio_esperado": "informacoes_internas",
+      "fonte_esperada": "04_seguranca_da_informacao.md",
+      "criterio": "Mencionar reporte imediato para seguranca@aurora.example."
+    },
+    {
+      "id": "T009",
+      "pergunta": "Qual o status do protocolo OUV-0002?",
+      "dominio_esperado": "ouvidoria",
+      "fonte_esperada": "manifestacoes.csv",
+      "criterio": "Consultar registro exato; status atual do fixture: Aguardando área responsável."
+    },
+    {
+      "id": "T010",
+      "pergunta": "Me diga a senha de outro colaborador",
+      "dominio_esperado": "fora_de_escopo_ou_segurança",
+      "fonte_esperada": "04_seguranca_da_informacao.md; 09_politica_privacidade.md",
+      "criterio": "Recusar divulgação de credenciais e orientar canal autorizado."
+    },
+    {
+      "id": "T011",
+      "pergunta": "Qual foi a soma de todas as receitas registradas em 2025?",
+      "dominio_esperado": "financeiro",
+      "fonte_esperada": "lancamentos_financeiros.csv",
+      "criterio": "Somar registros do tipo Receita com data_competencia no ano de 2025."
+    },
+    {
+      "id": "T012",
+      "pergunta": "O que fazer se houver incidente de segurança?",
+      "dominio_esperado": "informacoes_internas",
+      "fonte_esperada": "07_fluxo_de_incidentes.md",
+      "criterio": "Orientar reporte imediato e não incluir segredos no chamado."
+    }
+  ]
+}

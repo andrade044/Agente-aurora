@@ -1,0 +1,51 @@
+[
+  {
+    "id": "FAQ-001",
+    "pergunta": "Como solicito férias?",
+    "resposta": "Solicite pelo portal interno com pelo menos 30 dias corridos de antecedência.",
+    "documento": "01_politica_ferias.md",
+    "dominio": "informacoes_internas"
+  },
+  {
+    "id": "FAQ-002",
+    "pergunta": "Qual é o prazo de análise das férias?",
+    "resposta": "A liderança deve analisar em até 5 dias úteis.",
+    "documento": "01_politica_ferias.md",
+    "dominio": "informacoes_internas"
+  },
+  {
+    "id": "FAQ-003",
+    "pergunta": "Qual é o prazo para enviar reembolso?",
+    "resposta": "Até 10 dias corridos após a despesa, com comprovante e justificativa.",
+    "documento": "02_politica_reembolso.md",
+    "dominio": "informacoes_internas"
+  },
+  {
+    "id": "FAQ-004",
+    "pergunta": "Compras acima de R$ 10.000 precisam de qual aprovação?",
+    "resposta": "Liderança, gerente e diretoria, conforme o processo fictício.",
+    "documento": "03_aprovacao_de_compras.md",
+    "dominio": "informacoes_internas"
+  },
+  {
+    "id": "FAQ-005",
+    "pergunta": "Como reportar phishing?",
+    "resposta": "Reporte imediatamente para seguranca@aurora.example.",
+    "documento": "04_seguranca_da_informacao.md",
+    "dominio": "informacoes_internas"
+  },
+  {
+    "id": "FAQ-006",
+    "pergunta": "Como pedir acesso a um sistema?",
+    "resposta": "Abra chamado no portal de TI com sistema, perfil e justificativa; aguarde aprovações.",
+    "documento": "05_manual_de_acessos.md",
+    "dominio": "informacoes_internas"
+  },
+  {
+    "id": "FAQ-007",
+    "pergunta": "O agente consulta holerites individuais?",
+    "resposta": "Não. O agente não tem acesso a registros pessoais.",
+    "documento": "08_faq_rh.md",
+    "dominio": "informacoes_internas"
+  }
+]
