@@ -41,7 +41,10 @@
     <section id="view-logs" class="view">
       <div class="logs-head">
         <h2>Interações registradas</h2>
-        <button id="refresh-logs" class="ghost">Atualizar</button>
+        <div>
+          <a class="ghost" href="/api/logs/export" download="interacoes.jsonl">Exportar JSONL</a>
+          <button id="refresh-logs" class="ghost">Atualizar</button>
+        </div>
       </div>
       <div class="table-wrap">
         <table id="logs-table">

@@ -7,6 +7,7 @@ from contextlib import asynccontextmanager
 from typing import Any, Literal
 
 from fastapi import FastAPI, HTTPException, Query
+from fastapi.responses import PlainTextResponse
 from fastapi.concurrency import run_in_threadpool
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
@@ -82,6 +83,17 @@ async def chat(req: ChatRequest) -> dict[str, Any]:
 @app.get("/api/logs")
 def logs(limit: int = Query(50, ge=1, le=500)) -> list[dict[str, Any]]:
     return interaction_log.recent(limit)
+
+
+@app.get("/api/logs/export", response_class=PlainTextResponse)
+def export_logs(limit: int = Query(1000, ge=1, le=10000)) -> PlainTextResponse:
+    """Exporta as interações do banco em JSONL (uma por linha), para download."""
+    import json
+
+    rows = interaction_log.export(limit)
+    body = "\n".join(json.dumps(r, ensure_ascii=False, default=str) for r in rows) + ("\n" if rows else "")
+    return PlainTextResponse(body, media_type="application/x-ndjson",
+                             headers={"Content-Disposition": "attachment; filename=interacoes.jsonl"})
 
 
 @app.post("/api/admin/reingest")

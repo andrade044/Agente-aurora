@@ -104,6 +104,7 @@ docker compose exec api sh -c "pip install --user -q pytest==9.1.1 httpx==0.28.1
 |---|---|---|
 | `POST` | `/api/chat` | `{"pergunta": "...", "dominio": null}` → resposta, domínio, confiança, agente, fontes, IDs, latência |
 | `GET` | `/api/logs?limit=50` | últimas interações registradas |
+| `GET` | `/api/logs/export` | download de todas as interações em JSONL |
 | `GET` | `/api/info` | modo do LLM, estado do RAG e resumo da ingestão |
 | `GET` | `/api/health` | saúde da API e do banco |
 | `POST` | `/api/admin/reingest` | recarrega as bases sem reiniciar |
@@ -112,10 +113,17 @@ docker compose exec api sh -c "pip install --user -q pytest==9.1.1 httpx==0.28.1
 
 ## 6. Logs das interações
 
-Cada pergunta é registrada em **`logs/interacoes.jsonl`** (volume montado do container) e na tabela
+Cada pergunta é registrada em **`logs/interacoes.jsonl`** (dentro do volume `api_logs`) e na tabela
 **`agent_logs`** do PostgreSQL, com: timestamp, pergunta (com e-mails/CPF/telefones/segredos mascarados), domínio
 previsto, confiança, método de classificação, agente, fontes, IDs consultados, latência, status, erro e se o LLM
 foi usado. Também aparecem na aba **Logs** do frontend.
+
+Para baixar os logs:
+
+```bash
+curl -o interacoes.jsonl http://localhost:8000/api/logs/export     # do banco (ou botão "Exportar JSONL" na aba Logs)
+docker compose cp api:/app/logs/interacoes.jsonl ./interacoes.jsonl # arquivo do container
+```
 
 Exemplo de sessão de avaliação: [`docs/logs/`](docs/logs/).
 

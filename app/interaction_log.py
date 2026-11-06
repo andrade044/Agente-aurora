@@ -64,3 +64,9 @@ def recent(limit: int = 50) -> list[dict[str, Any]]:
         "SELECT id, ts, pergunta, dominio_previsto, confianca, metodo_classificacao, agente, fontes, "
         "ids_consultados, latencia_ms, status, erro, llm_usado FROM agent_logs ORDER BY ts DESC LIMIT %s",
         [limit])
+
+
+def export(limit: int = 1000) -> list[dict[str, Any]]:
+    """Todas as colunas, em ordem cronológica (para exportar em JSONL)."""
+    rows = db.fetch_all("SELECT * FROM agent_logs ORDER BY ts DESC LIMIT %s", [limit])
+    return list(reversed(rows))

@@ -20,7 +20,7 @@ Registro contínuo das interações com ferramentas de IA durante a construção
 
 ## Problemas conhecidos / limitações
 
-- Docker Compose não pôde ser executado no ambiente de desenvolvimento da IA (Docker Hub bloqueado — ver [004]); a configuração foi validada com `docker compose config` e a aplicação testada com o mesmo PostgreSQL 16 via uvicorn. **Validar `docker compose up --build` na máquina do desenvolvedor antes da entrega.**
+- Docker Compose validado de ponta a ponta no ambiente da IA (ver [008]). O build lá exigiu um Dockerfile temporário com o certificado do proxy do ambiente — isso **não** faz parte do repositório; em máquina normal `docker compose up --build` funciona direto. Ainda assim, rodar uma vez na máquina do desenvolvedor antes da entrega.
 - Caminho com OpenAI real não exercitado (sem chave no ambiente); coberto por testes com cliente simulado. Conferir o nome do modelo em `OPENAI_MODEL`.
 - Sem memória de conversa; parser por regras não entende períodos relativos ("mês passado").
 - Lista completa em `docs/ARQUITETURA.md#limitações-conhecidas`.
@@ -113,3 +113,15 @@ Calculado diretamente dos CSV com Python + `Decimal` (script ad hoc, entrada [00
 - **Problemas encontrados:** ver limitação do Docker na seção "Problemas conhecidos".
 - **Testes / validação:** `python -m scripts.avaliar` contra a API em modo determinístico: **12/12**. Sessão extra com perguntas ambíguas, fora de escopo, recusadas e escolha de domínio registrada em `docs/logs/interacoes_exemplo_modo_deterministico.jsonl`.
 - **Arquivos afetados:** `scripts/avaliar.py`, `Dockerfile`, `docker-compose.yml`, `.env.example`, `.dockerignore`, `README.md`, `docs/**`
+
+### [008] 2026-11-06 — Teste real com Docker e correção da permissão dos logs
+- **Ferramenta:** Claude Opus 5.5 (claude.ai)
+- **Prompt / solicitação:** "Pra liberar Docker Hub neste ambiente." → orientação para adicionar domínios do Docker Hub em Settings › Capabilities; depois "Pronto adicionei os domínios".
+- **Resposta / solução proposta:** Tentativas de `docker pull` revelaram os domínios necessários (`registry-1.docker.io`, `auth.docker.io` e `production.cloudfront.docker.com` para as camadas — a sugestão inicial `production.cloudflare.docker.com` estava errada). Com os domínios liberados, imagens baixadas, build e `docker compose up` executados.
+- **Decisão:** aceita.
+- **Problemas encontrados e soluções:**
+  - `429 Too Many Requests` do Docker Hub (limite anônimo) → novas tentativas com espera.
+  - `pip install` no build falhou com `CERTIFICATE_VERIFY_FAILED` (proxy TLS do ambiente da IA) → Dockerfile **temporário, fora do repositório**, que copia o certificado via `--build-context` só para este teste. O `Dockerfile` do repositório não foi alterado.
+  - **Bug real encontrado:** a API roda como usuário não-root (uid 1000) e a pasta `./logs` montada do host pertencia a outro usuário → `Permission denied` ao gravar `interacoes.jsonl` (o log no banco continuava funcionando). Em Linux com uid ≠ 1000 o avaliador veria o mesmo. **Correção:** volume nomeado `api_logs` no lugar do bind mount + endpoint `GET /api/logs/export` (JSONL do banco) + botão "Exportar JSONL" no frontend + instruções `docker compose cp` no README.
+- **Testes / validação:** `docker compose down -v` e subida do zero: containers `healthy`, ingestão automática, `scripts.avaliar` dentro do container **12/12**, `interacoes.jsonl` com 12 linhas e zero erros de gravação, logs preservados após `docker compose restart api`, export com 12 linhas, frontend HTTP 200. `pytest` dentro de um container na rede do compose: **51 passed**.
+- **Arquivos afetados:** `docker-compose.yml`, `app/main.py`, `app/interaction_log.py`, `frontend/index.html`, `frontend/styles.css`, `README.md`, `tests/test_integracao.py`

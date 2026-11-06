@@ -85,7 +85,7 @@ th { color: var(--muted); font-weight: 600; font-size: 12px; text-transform: upp
 #view-logs { padding: 24px 28px; overflow: auto; }
 .logs-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
 .logs-head h2 { margin: 0; font-size: 18px; }
-.ghost { background: transparent; color: var(--accent); border: 1px solid var(--accent); padding: 6px 14px; }
+.ghost { background: transparent; color: var(--accent); border: 1px solid var(--accent); padding: 6px 14px; text-decoration: none; display: inline-block; font-size: 15px; margin-left: 6px; }
 .table-wrap { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); overflow: auto; }
 #logs-table td { font-size: 12.5px; }
 #logs-table td.q { max-width: 340px; }

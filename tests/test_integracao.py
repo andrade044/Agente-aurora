@@ -78,4 +78,6 @@ def test_api_chat_logs_e_validacao(database, monkeypatch):
         assert client.post("/api/chat", json={"pergunta": ""}).status_code == 422
         logs = client.get("/api/logs?limit=5").json()
         assert logs and {"pergunta", "dominio_previsto", "latencia_ms", "status", "fontes"} <= set(logs[0])
+        export = client.get("/api/logs/export?limit=5")
+        assert export.status_code == 200 and export.text.strip().splitlines()
         assert client.get("/").status_code == 200

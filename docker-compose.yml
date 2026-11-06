@@ -24,7 +24,7 @@ services:
     ports:
       - "${API_PORT:-8000}:8000"
     volumes:
-      - ./logs:/app/logs
+      - api_logs:/app/logs
     depends_on:
       db:
         condition: service_healthy
@@ -32,3 +32,4 @@ services:
 
 volumes:
   pgdata:
+  api_logs:
