@@ -1,0 +1,9 @@
+.git
+.env
+.venv
+venv
+__pycache__
+*.pyc
+logs/*.jsonl
+docs/ai-conversations/*
+!docs/ai-conversations/README.md

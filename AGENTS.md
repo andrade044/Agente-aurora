@@ -21,8 +21,9 @@ Casos ambíguos → pedir esclarecimento. Fora de escopo ou pedidos de credencia
 
 ## 2. Forma de trabalho
 
-- O desenvolvedor (Matheus) é quem escreve a maior parte do código. A IA atua como **tech lead / revisor**: propõe abordagem, revisa, aponta riscos e sugere trechos pequenos. Não gere módulos inteiros sem ser pedido.
-- Trabalhe de forma incremental: uma etapa por vez, validada antes de seguir.
+- Desde a entrada [003] do DEVLOG, o desenvolvedor (Matheus) delegou a implementação à IA. A IA escreve o código, mas **toda decisão relevante continua registrada** e o desenvolvedor revisa antes da entrega.
+- Trabalhe de forma incremental: uma etapa por vez, validada (testes ou execução real) antes de seguir.
+- Mantenha os casos de `data/testes/perguntas_avaliacao.json` passando: rode `python -m pytest -q` e `python -m scripts.avaliar` após mudanças em orquestrador ou agentes.
 - Valores monetários sempre com `Decimal` / `NUMERIC(14,2)`. Nunca `float`.
 - Nunca commitar `.env`, chaves de API ou tokens.
 
