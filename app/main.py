@@ -43,6 +43,15 @@ app = FastAPI(title="Aurora — Agente Orquestrador", version="1.0.0", lifespan=
               description="Classifica perguntas e as encaminha aos agentes Financeiro, Informações internas e Ouvidoria.")
 
 
+@app.middleware("http")
+async def no_cache_frontend(request, call_next):
+    """Sem cache para o frontend: evita o navegador misturar app.js antigo com index.html novo após atualizar."""
+    response = await call_next(request)
+    if not request.url.path.startswith("/api/"):
+        response.headers["Cache-Control"] = "no-cache, must-revalidate"
+    return response
+
+
 class TurnoHistorico(BaseModel):
     pergunta: str = Field(..., max_length=1000)
     dominio: str | None = Field(None, max_length=40)

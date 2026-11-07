@@ -160,3 +160,12 @@ Calculado diretamente dos CSV com Python + `Decimal` (script ad hoc, entrada [00
 - **Problemas encontrados:** placeholder longo quebrava em duas linhas no celular → encurtado.
 - **Testes / validação:** screenshots em 1422×767 e 390×844 (Chrome headless), clique em exemplo e "Nova conversa" funcionando, console sem erros; cada um dos 12 exemplos enviado à API e roteado ao agente certo com status ok; `pytest` 68 passed.
 - **Arquivos afetados:** `frontend/index.html`, `frontend/app.js`, `frontend/styles.css`
+
+### [012] 2026-11-07 — Tela inicial vazia depois de atualizar o frontend (cache do navegador)
+- **Ferramenta:** Claude Opus 5.5 (claude.ai)
+- **Prompt / solicitação:** "Mas não mudou nada, a tela continua vazia de tudo" (após copiar o novo `frontend/` e rodar `docker compose up --build`).
+- **Diagnóstico:** o `index.html` novo não traz mais os exemplos fixos (agora gerados pelo `app.js`). Se o navegador reaproveita do cache um `app.js` antigo, esse script procura `#examples` (que não existe mais), lança `TypeError` e para antes de desenhar a tela, que fica vazia. Cenário reproduzido combinando os dois arquivos.
+- **Resposta / solução proposta:** middleware no FastAPI com `Cache-Control: no-cache, must-revalidate` para tudo que não é `/api/`, e versão nos links (`app.js?v=11`, `styles.css?v=11`) para forçar o download na primeira carga após a atualização.
+- **Decisão:** aceita. Evita o mesmo problema para o avaliador se ele abrir versões diferentes do projeto.
+- **Testes / validação:** cabeçalho conferido com `curl -I` (frontend com `no-cache`, API sem); screenshot e cliques sem erros no console; `pytest` 68 passed.
+- **Arquivos afetados:** `app/main.py`, `frontend/index.html`
