@@ -138,7 +138,9 @@ def main() -> int:
     for c, r, *_ in linhas:
         md += [f"### {c['id']} — {c['pergunta']}", f"_Critério do enunciado: {c['criterio']}_", "",
                "```text", r["resposta"], "```", ""]
-    Path(args.saida).write_text("\n".join(md), encoding="utf-8")
+    saida = Path(args.saida)
+    saida.parent.mkdir(parents=True, exist_ok=True)
+    saida.write_text("\n".join(md), encoding="utf-8")
     print(f"Relatório: {args.saida}")
     return 0 if aprovados == total else 1
 

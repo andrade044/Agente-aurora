@@ -16,7 +16,8 @@ COPY data ./data
 COPY scripts ./scripts
 COPY tests ./tests
 
-RUN useradd --create-home --uid 1000 aurora && mkdir -p /app/logs && chown -R aurora /app/logs
+# logs/ e docs/ graváveis pelo usuário da aplicação (logs da API e relatório do scripts.avaliar)
+RUN useradd --create-home --uid 1000 aurora && mkdir -p /app/logs /app/docs && chown -R aurora /app/logs /app/docs
 USER aurora
 
 EXPOSE 8000

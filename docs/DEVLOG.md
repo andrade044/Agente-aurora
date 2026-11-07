@@ -181,3 +181,12 @@ Calculado diretamente dos CSV com Python + `Decimal` (script ad hoc, entrada [00
 - **Decisão:** aceita.
 - **Testes / validação:** respostas conferidas via API (orçamento, execução, maiores despesas, contagem e listagem da ouvidoria, agrupamento por categoria); screenshot com tabela fechada e aberta, console sem erros; `pytest` 68 passed (inclui os 12 casos oficiais com os critérios de valor).
 - **Arquivos afetados:** `app/agents/financeiro.py`, `app/agents/ouvidoria.py`, `frontend/app.js`, `frontend/styles.css`, `frontend/index.html`
+
+### [014] 2026-11-07 — Relatório de avaliação não era gravado dentro do container
+- **Ferramenta:** Claude Opus 5.5 (claude.ai)
+- **Prompt / solicitação:** Matheus rodou `docker compose cp api:/app/docs/resultados_avaliacao.md docs/` e recebeu "Could not find the file /app/docs/resultados_avaliacao.md" (além de "service api is not running", porque o terminal do compose tinha sido fechado).
+- **Diagnóstico:** a imagem não copia a pasta `docs/`, então `/app/docs` não existia e o `scripts.avaliar` falharia ao gravar o relatório. Nos testes anteriores com Docker a IA usou `--saida /tmp/res.md`, por isso o problema não apareceu — o comando exatamente como está no README não tinha sido testado.
+- **Resposta / solução proposta:** `Dockerfile` cria `/app/docs` com dono `aurora`; `scripts/avaliar.py` cria a pasta de saída se não existir.
+- **Decisão:** aceita. Lição registrada: validar os comandos do README literalmente, não variações.
+- **Testes / validação:** Docker do zero com os comandos literais do README: `docker compose exec api python -m scripts.avaliar` → 12/12 e relatório gravado em `/app/docs/`; `docker compose cp api:/app/docs/resultados_avaliacao.md docs/` copiou; `curl .../api/logs/export` gerou o JSONL.
+- **Arquivos afetados:** `Dockerfile`, `scripts/avaliar.py`
