@@ -116,3 +116,52 @@ def test_base_url_vazia_usa_endpoint_oficial(monkeypatch):
     monkeypatch.setattr(llm_mod, "settings", replace(llm_mod.settings, openai_api_key="sk-teste", openai_base_url=""))
     from app.llm import OpenAIClient
     assert str(OpenAIClient()._client.base_url).startswith("https://api.openai.com/v1")
+
+
+# ------------------------------------------------------------------ memória curta / continuação
+from app.context import Turno, contextualizar, parece_continuacao  # noqa: E402
+
+HIST_COMPRA = [Turno("Quais são as aprovações para uma compra de R$ 12.000?", "informacoes_internas",
+                     "Compras acima de R$ 10.000 exigem liderança, gerente e diretoria.")]
+
+
+@pytest.mark.parametrize("pergunta,esperado", [
+    ("E se eu quiser de 6000?", True),
+    ("e em fevereiro?", True),
+    ("Mas eu só queria saber sobre uma compra de 6.000", True),
+    ("de 6000?", True),
+    ("Como solicito férias?", False),
+    ("Qual o status do OUV-0002?", False),
+])
+def test_parece_continuacao(pergunta, esperado):
+    assert parece_continuacao(pergunta, HIST_COMPRA) is esperado
+
+
+def test_sem_historico_nunca_e_continuacao():
+    assert parece_continuacao("E se eu quiser de 6000?", []) is False
+
+
+def test_reescrita_com_llm(fake_llm):
+    llm = fake_llm(json_fn=lambda s, u: {"continuacao": True,
+                                         "pergunta": "Quais são as aprovações para uma compra de R$ 6.000?"})
+    ctx = contextualizar("E se eu quiser de 6000?", HIST_COMPRA)
+    assert ctx.continuacao and ctx.metodo == "llm" and "6.000" in ctx.pergunta
+    assert "R$ 12.000" in llm.calls[0][1]  # o histórico foi enviado ao modelo
+
+
+def test_reescrita_sem_llm_concatena():
+    ctx = contextualizar("E se eu quiser de 6000?", HIST_COMPRA)
+    assert ctx.metodo == "concatenacao" and ctx.pergunta.startswith("Quais são as aprovações")
+    assert router.route(ctx.pergunta).dominio == "informacoes_internas"
+
+
+def test_reescrita_llm_invalida_cai_na_concatenacao(fake_llm):
+    fake_llm(json_fn=lambda s, u: {"continuacao": True, "pergunta": ""})
+    ctx = contextualizar("E se eu quiser de 6000?", HIST_COMPRA)
+    assert ctx.metodo == "concatenacao" and ctx.erro_llm
+
+
+def test_pergunta_nova_com_historico_nao_e_alterada(fake_llm):
+    llm = fake_llm(json_fn=lambda s, u: {"continuacao": False, "pergunta": "x"})
+    ctx = contextualizar("Como solicito férias?", HIST_COMPRA)
+    assert ctx.pergunta == "Como solicito férias?" and not ctx.continuacao and llm.calls == []

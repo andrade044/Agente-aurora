@@ -29,4 +29,8 @@ CREATE TABLE IF NOT EXISTS agent_logs (
     detalhes            JSONB
 );
 
+-- colunas adicionadas depois da primeira versão (bancos já existentes recebem via ALTER)
+ALTER TABLE agent_logs ADD COLUMN IF NOT EXISTS pergunta_interpretada TEXT;
+ALTER TABLE agent_logs ADD COLUMN IF NOT EXISTS resposta TEXT;
+
 CREATE INDEX IF NOT EXISTS idx_agent_logs_ts ON agent_logs (ts DESC);

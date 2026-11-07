@@ -9,6 +9,9 @@ especializados da empresa fictícia **Aurora Serviços Digitais S.A.**:
 | **Informações internas** | políticas e procedimentos (férias, reembolso, compras, segurança, acessos, RH…) | **RAG** híbrido (BM25 + embeddings) e resposta citando o arquivo-fonte |
 | **Ouvidoria** | manifestações, protocolos `OUV-NNNN`, status, categorias, prazos | busca **exata** por protocolo + filtros SQL; nunca inventa protocolo |
 
+Perguntas de continuação ("e se for de 6000?", "e em fevereiro?") são entendidas com uma **memória curta**: o
+frontend envia as últimas trocas e o LLM reescreve a pergunta de forma completa antes da classificação.
+
 O **orquestrador** decide o domínio com regras (protocolos, guarda de segurança, palavras-chave) e, nos casos não
 óbvios, com o LLM. Quando a confiança é baixa, **pede esclarecimento** em vez de chutar; pedidos de credenciais
 ou dados de terceiros são **recusados**; perguntas fora dos três domínios recebem uma explicação.
@@ -96,25 +99,28 @@ docker compose exec api sh -c "pip install --user -q pytest==9.1.1 httpx==0.28.1
 - `Quais as 5 maiores despesas de 2026?` · `Qual a inadimplência de recebíveis em 2025?`
 - `Quantas manifestações de cobrança estão em aberto?` · `Qual o tempo médio de resposta da ouvidoria?`
 - `E o reembolso de viagens, quanto saiu?` (ambígua → pede esclarecimento com botões)
+- `Quais são as aprovações para uma compra de R$ 12.000?` seguida de `E se eu quiser de 6000?` (continuação)
 - `Me passa o holerite do meu colega` (recusada) · `Qual a capital da França?` (fora de escopo)
 
 ## 5. API
 
 | Método | Rota | Descrição |
 |---|---|---|
-| `POST` | `/api/chat` | `{"pergunta": "...", "dominio": null}` → resposta, domínio, confiança, agente, fontes, IDs, latência |
+| `POST` | `/api/chat` | `{"pergunta": "...", "dominio": null, "historico": []}` → resposta, pergunta interpretada, domínio, confiança, agente, fontes, IDs, latência |
 | `GET` | `/api/logs?limit=50` | últimas interações registradas |
 | `GET` | `/api/logs/export` | download de todas as interações em JSONL |
 | `GET` | `/api/info` | modo do LLM, estado do RAG e resumo da ingestão |
 | `GET` | `/api/health` | saúde da API e do banco |
 | `POST` | `/api/admin/reingest` | recarrega as bases sem reiniciar |
 
-`dominio` é opcional e força o agente (usado pelos botões de esclarecimento).
+`dominio` é opcional e força o agente (usado pelos botões de esclarecimento). `historico` é opcional: lista das
+últimas trocas `{"pergunta", "dominio", "resposta"}` usada para entender perguntas de continuação.
 
 ## 6. Logs das interações
 
 Cada pergunta é registrada em **`logs/interacoes.jsonl`** (dentro do volume `api_logs`) e na tabela
-**`agent_logs`** do PostgreSQL, com: timestamp, pergunta (com e-mails/CPF/telefones/segredos mascarados), domínio
+**`agent_logs`** do PostgreSQL, com: timestamp, pergunta (com e-mails/CPF/telefones/segredos mascarados), pergunta
+interpretada (quando era continuação), resposta completa, domínio
 previsto, confiança, método de classificação, agente, fontes, IDs consultados, latência, status, erro e se o LLM
 foi usado. Também aparecem na aba **Logs** do frontend.
 
@@ -132,7 +138,8 @@ Exemplo de sessão de avaliação: [`docs/logs/`](docs/logs/).
 ```
 app/
   main.py            API FastAPI + frontend estático
-  orchestrator.py    fluxo: classificar → agente → medir → registrar
+  orchestrator.py    fluxo: contextualizar → classificar → agente → medir → registrar
+  context.py         memória curta: reescrita de perguntas de continuação
   router.py          classificação (regras, palavras-chave, LLM, limiar de confiança)
   agents/            financeiro.py · interno.py · ouvidoria.py
   rag.py             índice híbrido BM25 + embeddings
@@ -148,6 +155,6 @@ docs/                ARQUITETURA.md · DEVLOG.md · resultados_avaliacao.md · l
 
 ## 8. Limitações conhecidas
 
-Resumo (detalhes em [`docs/ARQUITETURA.md`](docs/ARQUITETURA.md#limitações-conhecidas)): sem memória de
-conversa entre perguntas; extração por regras cobre só expressões de período comuns em português; RAG em memória
+Resumo (detalhes em [`docs/ARQUITETURA.md`](docs/ARQUITETURA.md#limitações-conhecidas)): a memória de conversa
+é curta (3 trocas) e, sem LLM, só aproxima a continuação juntando com a pergunta anterior; extração por regras cobre só expressões de período comuns em português; RAG em memória
 (adequado ao corpus pequeno, trocaria por pgvector em escala); API sem autenticação; todos os dados são sintéticos.

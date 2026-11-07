@@ -25,7 +25,7 @@ FONTE_ORC = "orcamento_mensal.csv"
 FONTE_REGRAS = "indicadores_e_regras.json"
 
 OPERACOES = {"total", "agrupar", "maiores_lancamentos", "orcamento", "execucao_orcamentaria",
-             "inadimplencia", "lancamento"}
+             "inadimplencia", "lancamento", "nao_identificado"}
 TIPOS = {"Receita", "Despesa"}
 STATUS = {"Pago", "Pendente", "Atrasado"}
 DIMENSOES = {
@@ -201,11 +201,13 @@ def parse_rules(question: str) -> FinParams:
 
 _SYSTEM_EXTRACAO = """Você extrai parâmetros de perguntas sobre dados financeiros de uma empresa fictícia.
 Responda SOMENTE com um objeto JSON com estas chaves:
-- "operacao": uma de ["total","agrupar","maiores_lancamentos","orcamento","execucao_orcamentaria","inadimplencia","lancamento"]
+- "operacao": uma de ["total","agrupar","maiores_lancamentos","orcamento","execucao_orcamentaria","inadimplencia","lancamento","nao_identificado"]
     total = soma/contagem de lançamentos; agrupar = totais por uma dimensão (ranking);
     maiores_lancamentos = lista dos maiores/menores lançamentos; orcamento = valores do orçamento mensal
     (use agrupar_por="departamento" para comparar departamentos); execucao_orcamentaria = despesas pagas / orçamento;
-    inadimplencia = receitas atrasadas / receitas totais; lancamento = consulta de IDs FIN-NNNN.
+    inadimplencia = receitas atrasadas / receitas totais; lancamento = consulta de IDs FIN-NNNN;
+    nao_identificado = a pergunta NÃO pede nenhum valor, total, ranking ou lançamento registrado (ex.: pergunta
+    sobre regra/política, valor solto sem dizer o que medir, conversa). Na dúvida, use nao_identificado.
 - "tipo": "Receita", "Despesa" ou null
 - "status": lista com valores entre ["Pago","Pendente","Atrasado"] (vazia se a pergunta não restringe status;
     "pagas"/"efetivamente pagas" => ["Pago"])
@@ -534,12 +536,38 @@ HANDLERS = {
 }
 
 
+def _tem_alvo(question: str, p: FinParams) -> bool:
+    """A pergunta precisa dizer O QUE medir: um termo financeiro ou algum filtro concreto."""
+    from app.router import keyword_scores
+
+    return bool(keyword_scores(question)["financeiro"] > 0 or p.tipo or p.status or p.departamentos
+                or p.categorias or p.centros_custo or p.ids)
+
+
+def _esclarecimento() -> AgentResult:
+    return AgentResult(
+        "Não identifiquei qual informação financeira você quer consultar. Diga o que medir e, se possível, o "
+        "período. Exemplos:\n"
+        "- Quanto foi gasto em despesas pagas em março de 2025?\n"
+        "- Qual departamento teve o maior orçamento em janeiro de 2026?\n"
+        "- Quais as 5 maiores despesas de 2026?\n\n"
+        "Se a dúvida for sobre uma regra (por exemplo, quem aprova uma compra), ela é respondida pelas "
+        "políticas internas.",
+        [], status="esclarecimento",
+        opcoes=[{"dominio": "informacoes_internas", "rotulo": "Informações internas"}])
+
+
 def answer(question: str) -> AgentResult:
     params, metodo, erro_llm = extract_params(question)
-    result = HANDLERS[params.operacao](params)
+    if params.operacao == "nao_identificado" or not _tem_alvo(question, params):
+        result = _esclarecimento()
+    else:
+        result = HANDLERS[params.operacao](params)
     result.llm_usado = metodo == "llm"
     result.detalhes.update({"parametros": params.as_dict(), "extracao": metodo})
     if erro_llm:
         result.detalhes["erro_llm"] = erro_llm
+    if result.status == "esclarecimento":
+        return result
     result.resposta += "\n\n_Dados sintéticos de demonstração; não representam transações reais._"
     return result

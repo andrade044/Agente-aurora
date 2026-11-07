@@ -14,6 +14,10 @@ const EXAMPLES = [
   ["+", "Quantas manifestações de cobrança estão em aberto?"],
 ];
 
+// Memória curta da conversa: últimas trocas enviadas ao backend para entender continuações ("e se for 6000?")
+let history = [];
+const HISTORY_SENT = 3;
+
 const DOMAIN_LABEL = {
   financeiro: "Financeiro",
   informacoes_internas: "Informações internas",
@@ -94,7 +98,9 @@ function addBot(data, originalQuestion) {
     ? `<div class="sources">Fontes: ${data.fontes.map((f) => `<code>${escapeHtml(f)}</code>`).join("")}</div>` : "";
   const options = (data.opcoes || []).length
     ? `<div class="options">${data.opcoes.map((o) => `<button data-dom="${escapeHtml(o.dominio)}">${escapeHtml(o.rotulo)}</button>`).join("")}</div>` : "";
-  el.innerHTML = `${meta}<div class="answer">${renderMarkdown(data.resposta)}</div>${renderTable(data.tabela)}${options}${sources}
+  const interpreted = data.pergunta_interpretada
+    ? `<div class="interpreted">Entendi como: “${escapeHtml(data.pergunta_interpretada)}”</div>` : "";
+  el.innerHTML = `${meta}${interpreted}<div class="answer">${renderMarkdown(data.resposta)}</div>${renderTable(data.tabela)}${options}${sources}
     <details><summary>Detalhes técnicos</summary><pre>${escapeHtml(JSON.stringify({
       ids_consultados: data.ids_consultados, status: data.status, detalhes: data.detalhes }, null, 2))}</pre></details>`;
   el.querySelectorAll(".options button").forEach((b) =>
@@ -124,14 +130,21 @@ async function ask(question, dominio = null) {
     const res = await fetch("/api/chat", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(dominio ? { pergunta: question, dominio } : { pergunta: question }),
+      body: JSON.stringify({ pergunta: question, dominio, historico: history.slice(-HISTORY_SENT) }),
     });
     typing.remove();
     if (!res.ok) {
       const body = await res.json().catch(() => ({}));
       addError(`Erro ${res.status}: ${JSON.stringify(body.detail ?? body)}`);
     } else {
-      addBot(await res.json(), question);
+      const data = await res.json();
+      addBot(data, question);
+      // pedidos de esclarecimento não entram no histórico: o botão reenvia a mesma pergunta com o mesmo contexto
+      if (data.status !== "esclarecimento") {
+        history.push({ pergunta: data.pergunta_interpretada || question, dominio: data.dominio,
+                       resposta: String(data.resposta || "").slice(0, 500) });
+        history = history.slice(-10);
+      }
     }
   } catch (err) {
     typing.remove();
@@ -167,7 +180,7 @@ async function loadLogs() {
     tbody.innerHTML = rows.map((r) => `
       <tr>
         <td class="mono">${escapeHtml(new Date(r.ts).toLocaleString("pt-BR"))}</td>
-        <td class="q">${escapeHtml(r.pergunta)}</td>
+        <td class="q">${escapeHtml(r.pergunta)}${r.pergunta_interpretada ? `<br><small class="muted">→ ${escapeHtml(r.pergunta_interpretada)}</small>` : ""}</td>
         <td><span class="badge dom dom-${escapeHtml(r.dominio_previsto)}">${escapeHtml(DOMAIN_LABEL[r.dominio_previsto] || r.dominio_previsto)}</span></td>
         <td>${r.confianca != null ? Number(r.confianca).toFixed(2) : "—"}</td>
         <td>${escapeHtml(r.metodo_classificacao)}</td>
@@ -212,6 +225,15 @@ function init() {
     if (tab.dataset.view === "logs") loadLogs();
   }));
   $("#refresh-logs").addEventListener("click", loadLogs);
+  $("#new-chat").addEventListener("click", () => {
+    history = [];
+    $("#messages").innerHTML = "";
+    const w = document.createElement("div");
+    w.className = "welcome";
+    w.innerHTML = "<h2>Nova conversa</h2><p>O histórico anterior não será mais usado como contexto.</p>";
+    $("#messages").appendChild(w);
+    $("#input").focus();
+  });
   loadInfo();
 }
 

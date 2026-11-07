@@ -16,13 +16,14 @@ Registro contínuo das interações com ferramentas de IA durante a construção
 | D8 | RAG com índice BM25 em memória + embeddings persistidos em `DOUBLE PRECISION[]` no Postgres, busca híbrida 50/50 | pgvector; FAISS; só embeddings | Corpus de ~20 chunks; evita extensão/imagem extra; BM25 garante funcionamento sem chave | Aceita |
 | D9 | Atalho por regras no orquestrador: confiança ≥ 0,85 pula o LLM | Sempre chamar o LLM | Menos custo/latência; casos comuns determinísticos e testáveis | Aceita (limiar ajustado na [005]) |
 | D10 | Respostas numéricas (financeiro/ouvidoria) montadas por template; LLM redige só no RAG | LLM redigindo tudo | Texto nunca diverge do SQL; critério explícito na resposta | Aceita |
+| D12 | Memória curta no cliente (3 trocas) + reescrita da pergunta pelo LLM antes do roteamento | Memória de sessão no servidor; passar o histórico inteiro a cada agente | API continua sem estado; uma única reescrita serve a classificação e todos os agentes; fácil de auditar ("Entendi como") | Aceita |
 | D11 | Frontend servido pelo próprio FastAPI (`StaticFiles`) | Container nginx | Menos peças; sem CORS | Aceita |
 
 ## Problemas conhecidos / limitações
 
 - Docker Compose validado de ponta a ponta no ambiente da IA (ver [008]). O build lá exigiu um Dockerfile temporário com o certificado do proxy do ambiente — isso **não** faz parte do repositório; em máquina normal `docker compose up --build` funciona direto. Ainda assim, rodar uma vez na máquina do desenvolvedor antes da entrega.
 - Caminho com OpenAI real não exercitado (sem chave no ambiente); coberto por testes com cliente simulado. Conferir o nome do modelo em `OPENAI_MODEL`.
-- Sem memória de conversa; parser por regras não entende períodos relativos ("mês passado").
+- Memória curta de 3 trocas; sem LLM a continuação é aproximada por concatenação. Parser por regras não entende períodos relativos ("mês passado").
 - Lista completa em `docs/ARQUITETURA.md#limitações-conhecidas`.
 
 ## Gabarito calculado dos casos de teste
@@ -134,3 +135,19 @@ Calculado diretamente dos CSV com Python + `Decimal` (script ad hoc, entrada [00
 - **Problemas encontrados:** os testes usavam só o `FakeLLM`, por isso não pegaram a configuração real do SDK.
 - **Testes / validação:** novo teste `test_base_url_vazia_usa_endpoint_oficial`, confirmado falhando no código antigo e passando no novo; suíte completa: 52 passed.
 - **Arquivos afetados:** `app/llm.py`, `.env.example`, `tests/test_unit.py`
+
+### [010] 2026-11-07 — Primeiro teste com LLM real: continuação de conversa, financeiro "chutando" e resposta no log
+- **Ferramenta:** Claude Opus 5.5 (claude.ai)
+- **Prompt / solicitação:** Matheus rodou com a chave da OpenAI e enviou `interacoes.jsonl` pedindo para conferir ("Vê se essa conversa está de acordo"); depois autorizou as correções ("Por favor").
+- **Análise do log:** os 12 casos oficiais corretos, com LLM e embeddings ativos (cosseno preenchido, extração financeira via LLM batendo com o gabarito). Três problemas:
+  1. "E se eu quiser de 6000?" após a pergunta da compra de R$ 12.000 virou pergunta ambígua: o agente não tinha memória da conversa.
+  2. Com o domínio Financeiro escolhido no esclarecimento, o LLM "chutou" `maiores_lancamentos` e `total` geral para uma pergunta sem nada a calcular.
+  3. O log não guardava o texto da resposta, dificultando auditar a interação.
+- **Resposta / solução proposta:**
+  1. `app/context.py`: memória curta. O frontend envia as 3 últimas trocas; mensagens que parecem continuação são reescritas pelo LLM (JSON validado) antes do roteamento; sem LLM, concatenação com a pergunta anterior. A UI mostra "Entendi como: …" e ganhou o botão "Nova conversa".
+  2. Financeiro: operação `nao_identificado` no prompt e checagem determinística `_tem_alvo` (termo financeiro ou filtro concreto); sem alvo → pedido de esclarecimento com exemplos, mesmo com domínio forçado.
+  3. Colunas `pergunta_interpretada` e `resposta` em `agent_logs` (via `ALTER TABLE ... ADD COLUMN IF NOT EXISTS`, compatível com bancos já criados) e no JSONL.
+- **Decisão:** aceita (D12).
+- **Problemas encontrados:** a primeira versão da heurística tratava qualquer pergunta curta como continuação ("Como solicito férias?" tem 3 palavras) → pergunta curta só conta como continuação se não tiver termo de nenhum domínio nem protocolo.
+- **Testes / validação:** 16 testes novos (heurística de continuação, reescrita com LLM simulado, fallback por concatenação, reescrita inválida, pergunta nova não alterada, cenário completo do log com e sem LLM, financeiro sem alvo com LLM chutando, campos novos no log, API com `historico`): **68 passed**. Fluxo repetido no navegador (Chrome headless). Docker do zero: `healthy`, avaliação **12/12**, continuação e esclarecimento via HTTP, export com `resposta` e `pergunta_interpretada`, nenhum erro no log do container. Log real recebido salvo em `docs/logs/interacoes_llm_2026-11-07.jsonl`.
+- **Arquivos afetados:** `app/context.py` (novo), `app/orchestrator.py`, `app/main.py`, `app/agents/financeiro.py`, `app/interaction_log.py`, `app/sql/extra.sql`, `frontend/*`, `tests/*`, `README.md`, `docs/ARQUITETURA.md`

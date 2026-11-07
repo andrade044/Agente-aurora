@@ -9,6 +9,7 @@ from typing import Any
 
 from app.agents import financeiro, interno, ouvidoria
 from app.agents.base import AgentResult
+from app.context import Contexto, Turno, contextualizar
 from app.interaction_log import log_interaction
 from app.router import DOMINIOS, RouteDecision, route
 
@@ -54,24 +55,28 @@ def _esclarecimento(decision: RouteDecision) -> AgentResult:
         opcoes=[{"dominio": c, "rotulo": NOMES[c]} for c in candidatos])
 
 
-def handle(question: str, dominio_forcado: str | None = None) -> dict[str, Any]:
+def handle(question: str, dominio_forcado: str | None = None,
+           historico: list[Turno] | None = None) -> dict[str, Any]:
     question = (question or "").strip()
     start = time.perf_counter()
     entry_id = str(uuid.uuid4())
     decision: RouteDecision | None = None
     agente = None
     erro = None
+    ctx = Contexto(question, question)
 
     try:
+        ctx = contextualizar(question, historico)
+        pergunta = ctx.pergunta
         if dominio_forcado in DOMINIOS:
             decision = RouteDecision(dominio_forcado, 1.0, "escolha_do_usuario",
                                      "Domínio escolhido pelo usuário após pedido de esclarecimento.")
         else:
-            decision = route(question)
+            decision = route(pergunta)
 
         if decision.dominio in AGENTES:
             agente, fn = AGENTES[decision.dominio]
-            result = fn(question)
+            result = fn(pergunta)
         elif decision.dominio == "seguranca":
             agente, result = "guarda_seguranca", _seguranca()
         elif decision.dominio == "ambigua":
@@ -86,22 +91,27 @@ def handle(question: str, dominio_forcado: str | None = None) -> dict[str, Any]:
 
     latencia_ms = round((time.perf_counter() - start) * 1000)
     roteamento = asdict(decision) if decision else None
-    detalhes = {"roteamento": roteamento, **result.detalhes}
-    llm_usado = result.llm_usado or bool(decision and decision.metodo == "llm")
+    contexto = {"continuacao": ctx.continuacao, "metodo": ctx.metodo, "pergunta_interpretada": ctx.pergunta,
+                "historico": ctx.historico_usado, "erro_llm": ctx.erro_llm}
+    detalhes = {"contexto": contexto, "roteamento": roteamento, **result.detalhes}
+    llm_usado = result.llm_usado or bool(decision and decision.metodo == "llm") or ctx.metodo.startswith("llm")
+    interpretada = ctx.pergunta if ctx.continuacao else None
 
     log_interaction({
-        "id": entry_id, "pergunta": question,
+        "id": entry_id, "pergunta": question, "pergunta_interpretada": interpretada, "resposta": result.resposta,
         "dominio_previsto": decision.dominio if decision else None,
         "confianca": decision.confianca if decision else None,
         "metodo_classificacao": decision.metodo if decision else None,
         "agente": agente, "fontes": result.fontes, "ids_consultados": result.ids_consultados,
-        "latencia_ms": latencia_ms, "status": result.status, "erro": erro or result.detalhes.get("erro_llm"),
+        "latencia_ms": latencia_ms, "status": result.status,
+        "erro": erro or result.detalhes.get("erro_llm") or ctx.erro_llm,
         "llm_usado": llm_usado, "detalhes": detalhes,
     })
 
     return {
         "id": entry_id,
         "pergunta": question,
+        "pergunta_interpretada": interpretada,
         "resposta": result.resposta,
         "dominio": decision.dominio if decision else None,
         "confianca": decision.confianca if decision else None,

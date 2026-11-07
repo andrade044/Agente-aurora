@@ -14,6 +14,7 @@ from pydantic import BaseModel, Field
 
 from app import db, interaction_log, rag
 from app.config import ROOT_DIR, settings
+from app.context import Turno
 from app.ingest import run_ingestion
 from app.llm import get_llm
 from app.orchestrator import handle
@@ -42,10 +43,19 @@ app = FastAPI(title="Aurora — Agente Orquestrador", version="1.0.0", lifespan=
               description="Classifica perguntas e as encaminha aos agentes Financeiro, Informações internas e Ouvidoria.")
 
 
+class TurnoHistorico(BaseModel):
+    pergunta: str = Field(..., max_length=1000)
+    dominio: str | None = Field(None, max_length=40)
+    resposta: str | None = Field(None, max_length=2000)
+
+
 class ChatRequest(BaseModel):
     pergunta: str = Field(..., min_length=1, max_length=1000, examples=["Qual o status do protocolo OUV-0002?"])
     dominio: Literal["financeiro", "informacoes_internas", "ouvidoria"] | None = Field(
         None, description="Opcional: força o domínio (usado após um pedido de esclarecimento).")
+    historico: list[TurnoHistorico] = Field(
+        default_factory=list, max_length=10,
+        description="Opcional: últimas trocas da conversa, para entender perguntas de continuação.")
 
 
 @app.get("/api/health")
@@ -77,7 +87,8 @@ async def chat(req: ChatRequest) -> dict[str, Any]:
     pergunta = req.pergunta.strip()
     if not pergunta:
         raise HTTPException(422, "pergunta vazia")
-    return await run_in_threadpool(handle, pergunta, req.dominio)
+    historico = [Turno(t.pergunta, t.dominio, t.resposta) for t in req.historico]
+    return await run_in_threadpool(handle, pergunta, req.dominio, historico)
 
 
 @app.get("/api/logs")

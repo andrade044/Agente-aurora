@@ -81,3 +81,55 @@ def test_api_chat_logs_e_validacao(database, monkeypatch):
         export = client.get("/api/logs/export?limit=5")
         assert export.status_code == 200 and export.text.strip().splitlines()
         assert client.get("/").status_code == 200
+
+
+# ------------------------------------------------------------------ continuação e esclarecimento
+from app.context import Turno  # noqa: E402
+
+HIST = [Turno("Quais são as aprovações para uma compra de R$ 12.000?", "informacoes_internas",
+              "Compras acima de R$ 10.000 exigem liderança, gerente e diretoria.")]
+
+
+def test_continuacao_sem_llm_herda_o_assunto(database):
+    r = handle("E se eu quiser de 6000?", historico=HIST)
+    assert r["dominio"] == "informacoes_internas" and "03_aprovacao_de_compras.md" in r["fontes"]
+    assert r["pergunta_interpretada"]
+
+
+def test_continuacao_com_llm_reescreve_e_responde(database, fake_llm):
+    def json_fn(system, user):
+        assert "reescreve" in system  # roteamento por regras não precisa do LLM aqui
+        return {"continuacao": True, "pergunta": "Quais são as aprovações para uma compra de R$ 6.000?"}
+
+    fake_llm(json_fn=json_fn,
+             text_fn=lambda s, u: "Até R$ 10.000 basta a aprovação da liderança. Fonte: 03_aprovacao_de_compras.md")
+    r = handle("E se eu quiser de 6000?", historico=HIST)
+    assert r["pergunta_interpretada"] == "Quais são as aprovações para uma compra de R$ 6.000?"
+    assert r["dominio"] == "informacoes_internas" and r["fontes"] == ["03_aprovacao_de_compras.md"]
+
+
+def test_financeiro_sem_alvo_pede_esclarecimento(database, fake_llm):
+    # mesmo que o LLM "chute" uma operação, sem termo financeiro nem filtro o agente não inventa consulta
+    fake_llm(json_fn=lambda s, u: {"operacao": "maiores_lancamentos", "limite": 10})
+    r = handle("E se eu quiser de 6000?", dominio_forcado="financeiro")
+    assert r["status"] == "esclarecimento" and not r["tabela"]
+    r = handle("Mas eu só queria saber sobre uma compra de 6.000, não queria extrato", dominio_forcado="financeiro")
+    assert r["status"] == "esclarecimento"
+
+
+def test_log_guarda_resposta_e_pergunta_interpretada(database):
+    r = handle("E se eu quiser de 6000?", historico=HIST)
+    row = database.fetch_one("SELECT pergunta, pergunta_interpretada, resposta FROM agent_logs WHERE id = %s",
+                             [r["id"]])
+    assert row["pergunta"] == "E se eu quiser de 6000?"
+    assert row["pergunta_interpretada"] and row["resposta"] == r["resposta"]
+
+
+def test_api_aceita_historico(database, monkeypatch):
+    monkeypatch.setenv("INGEST_ON_STARTUP", "false")
+    from app.main import app
+    with TestClient(app) as client:
+        body = {"pergunta": "E se eu quiser de 6000?",
+                "historico": [{"pergunta": HIST[0].pergunta, "dominio": "informacoes_internas", "resposta": "..."}]}
+        r = client.post("/api/chat", json=body).json()
+        assert r["dominio"] == "informacoes_internas" and r["pergunta_interpretada"]

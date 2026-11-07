@@ -33,6 +33,10 @@ def mask(text: str) -> str:
 def log_interaction(entry: dict[str, Any]) -> None:
     entry = dict(entry)
     entry["pergunta"] = mask(entry["pergunta"])
+    if entry.get("pergunta_interpretada"):
+        entry["pergunta_interpretada"] = mask(entry["pergunta_interpretada"])
+    entry.setdefault("pergunta_interpretada", None)
+    entry.setdefault("resposta", None)
     entry.setdefault("ts", datetime.now(timezone.utc).isoformat())
 
     try:
@@ -45,9 +49,10 @@ def log_interaction(entry: dict[str, Any]) -> None:
     try:
         db.execute(
             """
-            INSERT INTO agent_logs (id, ts, pergunta, dominio_previsto, confianca, metodo_classificacao, agente,
-                                    fontes, ids_consultados, latencia_ms, status, erro, llm_usado, detalhes)
-            VALUES (%(id)s, %(ts)s, %(pergunta)s, %(dominio_previsto)s, %(confianca)s, %(metodo_classificacao)s,
+            INSERT INTO agent_logs (id, ts, pergunta, pergunta_interpretada, resposta, dominio_previsto, confianca,
+                                    metodo_classificacao, agente, fontes, ids_consultados, latencia_ms, status, erro,
+                                    llm_usado, detalhes)
+            VALUES (%(id)s, %(ts)s, %(pergunta)s, %(pergunta_interpretada)s, %(resposta)s, %(dominio_previsto)s, %(confianca)s, %(metodo_classificacao)s,
                     %(agente)s, %(fontes)s, %(ids_consultados)s, %(latencia_ms)s, %(status)s, %(erro)s,
                     %(llm_usado)s, %(detalhes)s)
             """,
@@ -61,7 +66,7 @@ def log_interaction(entry: dict[str, Any]) -> None:
 
 def recent(limit: int = 50) -> list[dict[str, Any]]:
     return db.fetch_all(
-        "SELECT id, ts, pergunta, dominio_previsto, confianca, metodo_classificacao, agente, fontes, "
+        "SELECT id, ts, pergunta, pergunta_interpretada, dominio_previsto, confianca, metodo_classificacao, agente, fontes, "
         "ids_consultados, latencia_ms, status, erro, llm_usado FROM agent_logs ORDER BY ts DESC LIMIT %s",
         [limit])
 

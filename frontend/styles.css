@@ -96,3 +96,7 @@ th { color: var(--muted); font-weight: 600; font-size: 12px; text-transform: upp
   .subtitle { display: none; }
   .msg.user { max-width: 90%; }
 }
+
+.interpreted { font-size: 12.5px; color: var(--muted); margin: -4px 0 10px; font-style: italic; }
+.muted { color: var(--muted); }
+.ghost.small { font-size: 13px; padding: 5px 12px; margin-left: 0; }

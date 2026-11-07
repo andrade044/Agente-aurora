@@ -23,6 +23,8 @@ flowchart LR
 
 Fluxo de uma pergunta (`app/orchestrator.py`):
 
+0. **Contextualização** (`app/context.py`): se houver histórico e a mensagem parecer continuação, ela é reescrita
+   como pergunta completa (ver "Memória curta" abaixo).
 1. **Classificação** (`app/router.py`) devolve `dominio`, `confianca`, `metodo` e `justificativa`.
 2. O orquestrador chama o agente do domínio, a guarda de segurança, o pedido de esclarecimento ou a resposta de
    fora de escopo.
@@ -50,6 +52,21 @@ A classificação é **em camadas, da mais barata e exata para a mais flexível*
 - Depois de um pedido de esclarecimento, o usuário escolhe o domínio num botão, e a pergunta é reenviada com
   `dominio` forçado (`metodo = escolha_do_usuario`).
 
+## Memória curta (`app/context.py`)
+
+O frontend guarda as últimas trocas (pergunta interpretada, domínio e início da resposta) e envia as 3 mais
+recentes em `historico`. Uma mensagem é tratada como **continuação** quando começa com marcadores como "e", "e se",
+"mas", "e em", contém referências ("isso", "esse", "anterior") ou é curta e sem termos de nenhum domínio. Perguntas
+completas ("Como solicito férias?") passam direto, sem custo de LLM.
+
+- **Com LLM**: o modelo recebe o histórico e devolve `{"continuacao", "pergunta"}`; a pergunta reescrita segue para
+  o orquestrador e aparece na UI como "Entendi como: …". Ex.: "E se eu quiser de 6000?" → "Quais são as aprovações
+  para uma compra de R$ 6.000?".
+- **Sem LLM / falha**: a mensagem é concatenada à pergunta anterior, o que normalmente leva ao mesmo domínio e aos
+  mesmos documentos. É uma aproximação (ver limitações).
+- Pedidos de esclarecimento não entram no histórico; o botão de domínio reenvia a mesma pergunta com o mesmo contexto.
+- "Nova conversa" limpa o histórico.
+
 ## Agente Financeiro (`app/agents/financeiro.py`)
 
 Segue a orientação do pacote: *"consultas agregadas e filtros devem usar SQL/Python determinístico"* e *"não
@@ -63,7 +80,10 @@ execute SQL arbitrário gerado pelo modelo"*.
 2. **Execução**: sete operações pré-definidas — `total`, `agrupar`, `maiores_lancamentos`, `orcamento`,
    `execucao_orcamentaria`, `inadimplencia` e `lancamento` — com SQL fixo, filtros como parâmetros
    (`%s`/`ANY(%s)`) e colunas vindas de dicionários internos, nunca da entrada.
-3. **Resposta por template**, com valores `NUMERIC` → `Decimal` formatados em BRL e o **critério usado** escrito
+3. **Sem alvo, sem consulta**: se a pergunta não tem termo financeiro nem filtro concreto (ou o LLM devolve
+   `nao_identificado`), o agente pede esclarecimento com exemplos em vez de "chutar" uma consulta. Isso vale mesmo
+   quando o usuário força o domínio financeiro.
+4. **Resposta por template**, com valores `NUMERIC` → `Decimal` formatados em BRL e o **critério usado** escrito
    por extenso (tipo, status, período, campo de data).
 
 Regras de `indicadores_e_regras.json` aplicadas: "pagas" ⇒ `status = Pago`; despesas sem status ⇒ "incorridas"
@@ -109,7 +129,8 @@ receitas.
 
 ## Logs
 
-`logs/interacoes.jsonl` + tabela `agent_logs`. Campos pedidos em `ingestao_e_uso.md`: timestamp, pergunta, domínio
+`logs/interacoes.jsonl` + tabela `agent_logs` (exportável em `/api/logs/export`). Campos pedidos em
+`ingestao_e_uso.md`: timestamp, pergunta (e a pergunta interpretada, quando era continuação), resposta completa, domínio
 previsto, agente, fontes/IDs, latência, status, erro, além de confiança, método de classificação, uso de LLM e
 detalhes (parâmetros extraídos, chunks recuperados com escores). Antes de gravar, a pergunta passa por máscara de
 e-mails (exceto os fictícios `@aurora.example`), CPF, telefone e strings com cara de chave/token.
@@ -132,8 +153,9 @@ O histórico de cada decisão (com alternativas e problemas encontrados) está e
 
 ## Limitações conhecidas
 
-- **Sem memória de conversa**: cada pergunta é independente (exceto a escolha de domínio após esclarecimento).
-  "E em fevereiro?" logo depois de uma pergunta financeira não herda o contexto.
+- **Memória curta**: só as 3 últimas trocas, mantidas no navegador (recarregar a página zera). Sem LLM, a
+  continuação é aproximada por concatenação: "E em fevereiro?" depois de "gastos de janeiro de 2025" vira
+  janeiro–fevereiro em vez de só fevereiro. Com LLM a reescrita resolve esses casos.
 - **Parser por regras**: cobre períodos comuns ("janeiro a março de 2025", "1º trimestre", "jan/2026", "2025",
   datas ISO), mas não expressões relativas ("mês passado", "este ano"). Com LLM, estas são interpretadas pelo
   modelo e validadas.
