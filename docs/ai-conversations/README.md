@@ -1,8 +1,7 @@
 # Histórico de conversas com IA
 
-Coloque aqui as exportações das conversas usadas no desenvolvimento.
 
-- **claude.ai:** Configurações → Privacidade → Exportar dados. O e-mail traz um `.zip` com `conversations.json`; extraia apenas as conversas deste desafio.
-- **Outras ferramentas:** exportação nativa quando houver; caso contrário, cópia em Markdown ou capturas de tela.
+   O histórico completo das conversas usadas no desenvolvimento (Claude, claude.ai) foi enviado
+   separadamente, junto com a entrega, para não publicar a conversa no repositório.
 
-Antes de commitar: remova chaves de API, tokens, e-mails pessoais e qualquer conversa sem relação com o desafio.
+   O processo também está registrado de forma estruturada em [`../DEVLOG.md`](../DEVLOG.md).
