@@ -156,7 +156,7 @@ Calculado diretamente dos CSV com Python + `Decimal` (script ad hoc, entrada [00
 - **Ferramenta:** Claude Opus 5.5 (claude.ai)
 - **Prompt / solicitação:** Matheus, olhando a tela inicial: "A entrada da plataforma é essa mesma? Com esse tanto de informação?"; aceitou a proposta de três cartões ("Acho que seria mais interessante").
 - **Resposta / solução proposta:** Os 10 botões com códigos de teste (T001…) deram lugar a três cartões, um por agente (Financeiro, Informações internas, Ouvidoria), cada um com uma linha explicando o que responde e 2 exemplos clicáveis. Os códigos de teste saíram da interface (continuam no `scripts/avaliar.py`). "Nova conversa" volta a mostrar os cartões. Placeholder encurtado.
-- **Decisão:** aceita.
+- **Decisão:** modificada a pedido — com 2 exemplos a tela ficou vazia demais ("deixa umas 3 ou 4 opções"); passou a 4 exemplos por cartão (12 no total, cobrindo 9 casos oficiais e perguntas extras como maiores despesas, execução orçamentária e tempo médio de resposta).
 - **Problemas encontrados:** placeholder longo quebrava em duas linhas no celular → encurtado.
-- **Testes / validação:** screenshots em 1422×767 e 390×844 (Chrome headless), clique em exemplo e "Nova conversa" funcionando, console sem erros; `pytest` 68 passed.
+- **Testes / validação:** screenshots em 1422×767 e 390×844 (Chrome headless), clique em exemplo e "Nova conversa" funcionando, console sem erros; cada um dos 12 exemplos enviado à API e roteado ao agente certo com status ok; `pytest` 68 passed.
 - **Arquivos afetados:** `frontend/index.html`, `frontend/app.js`, `frontend/styles.css`

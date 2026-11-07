@@ -9,6 +9,8 @@ const AGENTS = [
     exemplos: [
       "Quanto foi gasto em despesas pagas de janeiro a março de 2025?",
       "Qual departamento tem maior orçamento em janeiro de 2026?",
+      "Quais as 5 maiores despesas de 2026?",
+      "Qual a execução orçamentária por departamento no 1º trimestre de 2025?",
     ],
   },
   {
@@ -17,7 +19,9 @@ const AGENTS = [
     descricao: "Políticas e procedimentos: férias, reembolso, compras, segurança, acessos e RH.",
     exemplos: [
       "Como solicito férias?",
+      "Qual o prazo para pedir reembolso?",
       "Quais são as aprovações para uma compra de R$ 12.000?",
+      "Como reporto um e-mail de phishing?",
     ],
   },
   {
@@ -26,7 +30,9 @@ const AGENTS = [
     descricao: "Manifestações e protocolos: status, categorias e prazos de resposta.",
     exemplos: [
       "Qual o status do protocolo OUV-0002?",
+      "Quais status podem aparecer na ouvidoria?",
       "Quantas manifestações de cobrança estão em aberto?",
+      "Qual o tempo médio de resposta da ouvidoria?",
     ],
   },
 ];
