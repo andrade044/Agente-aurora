@@ -125,3 +125,12 @@ Calculado diretamente dos CSV com Python + `Decimal` (script ad hoc, entrada [00
   - **Bug real encontrado:** a API roda como usuário não-root (uid 1000) e a pasta `./logs` montada do host pertencia a outro usuário → `Permission denied` ao gravar `interacoes.jsonl` (o log no banco continuava funcionando). Em Linux com uid ≠ 1000 o avaliador veria o mesmo. **Correção:** volume nomeado `api_logs` no lugar do bind mount + endpoint `GET /api/logs/export` (JSONL do banco) + botão "Exportar JSONL" no frontend + instruções `docker compose cp` no README.
 - **Testes / validação:** `docker compose down -v` e subida do zero: containers `healthy`, ingestão automática, `scripts.avaliar` dentro do container **12/12**, `interacoes.jsonl` com 12 linhas e zero erros de gravação, logs preservados após `docker compose restart api`, export com 12 linhas, frontend HTTP 200. `pytest` dentro de um container na rede do compose: **51 passed**.
 - **Arquivos afetados:** `docker-compose.yml`, `app/main.py`, `app/interaction_log.py`, `frontend/index.html`, `frontend/styles.css`, `README.md`, `tests/test_integracao.py`
+
+### [009] 2026-11-07 — Bug: OPENAI_BASE_URL vazio quebrava o cliente OpenAI
+- **Ferramenta:** Claude Opus 5.5 (claude.ai)
+- **Prompt / solicitação:** Ao preencher o `.env`: "No .env pede a URL base da openai" (o que colocar em `OPENAI_BASE_URL`).
+- **Resposta / solução proposta:** Deixar em branco. Ao verificar, a IA descobriu que o SDK `openai` lê a variável de ambiente `OPENAI_BASE_URL` por conta própria: com `OPENAI_BASE_URL=` vazio (como no `.env.example` e no `env_file` do compose) o cliente ficava com `base_url = ''`, todas as chamadas falhariam e a aplicação cairia silenciosamente no modo determinístico. O código só passava `base_url` quando a variável tinha valor.
+- **Decisão:** corrigido — `OpenAIClient` agora sempre passa `base_url` explícito (`OPENAI_BASE_URL` ou `https://api.openai.com/v1`). Comentário do `.env.example` esclarecido.
+- **Problemas encontrados:** os testes usavam só o `FakeLLM`, por isso não pegaram a configuração real do SDK.
+- **Testes / validação:** novo teste `test_base_url_vazia_usa_endpoint_oficial`, confirmado falhando no código antigo e passando no novo; suíte completa: 52 passed.
+- **Arquivos afetados:** `app/llm.py`, `.env.example`, `tests/test_unit.py`

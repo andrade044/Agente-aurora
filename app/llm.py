@@ -15,6 +15,8 @@ from app.config import settings
 
 log = logging.getLogger("aurora.llm")
 
+DEFAULT_OPENAI_BASE_URL = "https://api.openai.com/v1"
+
 
 class LLMError(RuntimeError):
     pass
@@ -59,11 +61,9 @@ class OpenAIClient(LLMClient):
     def __init__(self) -> None:
         from openai import OpenAI
 
-        kwargs: dict[str, Any] = {"api_key": settings.openai_api_key, "timeout": settings.llm_timeout_s,
-                                  "max_retries": 2}
-        if settings.openai_base_url:
-            kwargs["base_url"] = settings.openai_base_url
-        self._client = OpenAI(**kwargs)
+        # base_url sempre explícito: com OPENAI_BASE_URL= vazio no .env, o SDK usaria "" como endereço da API
+        self._client = OpenAI(api_key=settings.openai_api_key, timeout=settings.llm_timeout_s, max_retries=2,
+                              base_url=settings.openai_base_url or DEFAULT_OPENAI_BASE_URL)
         self.model = settings.openai_model
 
     def _chat(self, system: str, user: str, json_mode: bool) -> str:

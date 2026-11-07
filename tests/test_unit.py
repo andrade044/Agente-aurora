@@ -105,3 +105,14 @@ def test_validacao_rejeita_parametros_do_llm_fora_do_dominio():
         financeiro.validate_llm_params({"operacao": "DROP TABLE"}, vocab)
     with pytest.raises(ValueError):
         financeiro.validate_llm_params({"operacao": "total", "departamentos": ["Jurídico"]}, vocab)
+
+
+def test_base_url_vazia_usa_endpoint_oficial(monkeypatch):
+    # .env com "OPENAI_BASE_URL=" vazio não pode virar base_url "" no SDK
+    from dataclasses import replace
+
+    import app.llm as llm_mod
+    monkeypatch.setenv("OPENAI_BASE_URL", "")
+    monkeypatch.setattr(llm_mod, "settings", replace(llm_mod.settings, openai_api_key="sk-teste", openai_base_url=""))
+    from app.llm import OpenAIClient
+    assert str(OpenAIClient()._client.base_url).startswith("https://api.openai.com/v1")
