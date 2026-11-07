@@ -1,17 +1,34 @@
 // Frontend sem frameworks: conversa com /api/chat e lista /api/logs.
 const $ = (sel) => document.querySelector(sel);
 
-const EXAMPLES = [
-  ["T001", "Como solicito férias?"],
-  ["T003", "Quais são as aprovações para uma compra de R$ 12.000?"],
-  ["T006", "Quanto foi gasto em despesas pagas no período de janeiro a março de 2025?"],
-  ["T007", "Qual departamento tem maior orçamento em janeiro de 2026?"],
-  ["T009", "Qual o status do protocolo OUV-0002?"],
-  ["T004", "Existe o protocolo OUV-9999?"],
-  ["T005", "Quais status podem aparecer na ouvidoria?"],
-  ["T010", "Me diga a senha de outro colaborador"],
-  ["+", "Qual a execução orçamentária por departamento no 1º trimestre de 2025?"],
-  ["+", "Quantas manifestações de cobrança estão em aberto?"],
+const AGENTS = [
+  {
+    dominio: "financeiro",
+    titulo: "Financeiro",
+    descricao: "Receitas, despesas, orçamento e indicadores, calculados direto da base.",
+    exemplos: [
+      "Quanto foi gasto em despesas pagas de janeiro a março de 2025?",
+      "Qual departamento tem maior orçamento em janeiro de 2026?",
+    ],
+  },
+  {
+    dominio: "informacoes_internas",
+    titulo: "Informações internas",
+    descricao: "Políticas e procedimentos: férias, reembolso, compras, segurança, acessos e RH.",
+    exemplos: [
+      "Como solicito férias?",
+      "Quais são as aprovações para uma compra de R$ 12.000?",
+    ],
+  },
+  {
+    dominio: "ouvidoria",
+    titulo: "Ouvidoria",
+    descricao: "Manifestações e protocolos: status, categorias e prazos de resposta.",
+    exemplos: [
+      "Qual o status do protocolo OUV-0002?",
+      "Quantas manifestações de cobrança estão em aberto?",
+    ],
+  },
 ];
 
 // Memória curta da conversa: últimas trocas enviadas ao backend para entender continuações ("e se for 6000?")
@@ -69,6 +86,22 @@ function renderTable(rows) {
 function scrollToEnd() {
   const m = $("#messages");
   m.scrollTop = m.scrollHeight;
+}
+
+function renderWelcome(titulo = "Como posso ajudar?") {
+  const w = document.createElement("div");
+  w.className = "welcome";
+  w.innerHTML = `<h2>${escapeHtml(titulo)}</h2>
+    <p>Pergunte em linguagem natural: eu identifico o assunto e encaminho ao agente certo.</p>
+    <div class="agents">${AGENTS.map((a) => `
+      <section class="agent agent-${a.dominio}">
+        <h3>${escapeHtml(a.titulo)}</h3>
+        <p>${escapeHtml(a.descricao)}</p>
+        ${a.exemplos.map((q) => `<button type="button" class="example">${escapeHtml(q)}</button>`).join("")}
+      </section>`).join("")}
+    </div>`;
+  w.querySelectorAll(".example").forEach((b) => b.addEventListener("click", () => ask(b.textContent)));
+  $("#messages").appendChild(w);
 }
 
 function addUser(text) {
@@ -195,15 +228,7 @@ async function loadLogs() {
 }
 
 function init() {
-  const ex = $("#examples");
-  EXAMPLES.forEach(([id, q]) => {
-    const b = document.createElement("button");
-    b.className = "chip";
-    b.type = "button";
-    b.innerHTML = `<small>${escapeHtml(id)}</small>${escapeHtml(q)}`;
-    b.addEventListener("click", () => ask(q));
-    ex.appendChild(b);
-  });
+  renderWelcome();
 
   const input = $("#input");
   $("#form").addEventListener("submit", (e) => {
@@ -228,10 +253,7 @@ function init() {
   $("#new-chat").addEventListener("click", () => {
     history = [];
     $("#messages").innerHTML = "";
-    const w = document.createElement("div");
-    w.className = "welcome";
-    w.innerHTML = "<h2>Nova conversa</h2><p>O histórico anterior não será mais usado como contexto.</p>";
-    $("#messages").appendChild(w);
+    renderWelcome("Nova conversa");
     $("#input").focus();
   });
   loadInfo();

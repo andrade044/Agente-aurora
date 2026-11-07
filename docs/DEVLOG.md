@@ -151,3 +151,12 @@ Calculado diretamente dos CSV com Python + `Decimal` (script ad hoc, entrada [00
 - **Problemas encontrados:** a primeira versão da heurística tratava qualquer pergunta curta como continuação ("Como solicito férias?" tem 3 palavras) → pergunta curta só conta como continuação se não tiver termo de nenhum domínio nem protocolo.
 - **Testes / validação:** 16 testes novos (heurística de continuação, reescrita com LLM simulado, fallback por concatenação, reescrita inválida, pergunta nova não alterada, cenário completo do log com e sem LLM, financeiro sem alvo com LLM chutando, campos novos no log, API com `historico`): **68 passed**. Fluxo repetido no navegador (Chrome headless). Docker do zero: `healthy`, avaliação **12/12**, continuação e esclarecimento via HTTP, export com `resposta` e `pergunta_interpretada`, nenhum erro no log do container. Log real recebido salvo em `docs/logs/interacoes_llm_2026-11-07.jsonl`.
 - **Arquivos afetados:** `app/context.py` (novo), `app/orchestrator.py`, `app/main.py`, `app/agents/financeiro.py`, `app/interaction_log.py`, `app/sql/extra.sql`, `frontend/*`, `tests/*`, `README.md`, `docs/ARQUITETURA.md`
+
+### [011] 2026-11-07 — Tela inicial mais limpa
+- **Ferramenta:** Claude Opus 5.5 (claude.ai)
+- **Prompt / solicitação:** Matheus, olhando a tela inicial: "A entrada da plataforma é essa mesma? Com esse tanto de informação?"; aceitou a proposta de três cartões ("Acho que seria mais interessante").
+- **Resposta / solução proposta:** Os 10 botões com códigos de teste (T001…) deram lugar a três cartões, um por agente (Financeiro, Informações internas, Ouvidoria), cada um com uma linha explicando o que responde e 2 exemplos clicáveis. Os códigos de teste saíram da interface (continuam no `scripts/avaliar.py`). "Nova conversa" volta a mostrar os cartões. Placeholder encurtado.
+- **Decisão:** aceita.
+- **Problemas encontrados:** placeholder longo quebrava em duas linhas no celular → encurtado.
+- **Testes / validação:** screenshots em 1422×767 e 390×844 (Chrome headless), clique em exemplo e "Nova conversa" funcionando, console sem erros; `pytest` 68 passed.
+- **Arquivos afetados:** `frontend/index.html`, `frontend/app.js`, `frontend/styles.css`
