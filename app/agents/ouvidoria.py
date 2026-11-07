@@ -303,8 +303,9 @@ def _op_contagem(p: OuvParams) -> AgentResult:
         rows = db.fetch_all(f"SELECT {expr} AS grupo, COUNT(*) AS n FROM manifestacoes_ouvidoria {where} "
                             f"GROUP BY 1 ORDER BY {order}", params)
     resposta = f"Há **{plural(total, 'manifestação', 'manifestações')}** com o critério ({_criterio(p)})."
-    if rows:
-        resposta += f"\n\nDistribuição por {dim}:\n" + "\n".join(f"- {r['grupo']}: {r['n']}" for r in rows)
+    if len(rows) > 1:
+        top = max(rows, key=lambda r: r["n"])
+        resposta += f" O grupo mais frequente por {dim} é **{top['grupo']}** ({top['n']})."
     tabela = [{dim: r["grupo"], "manifestações": r["n"]} for r in rows] if rows else None
     return AgentResult(resposta, [FONTE_CSV], tabela=tabela, detalhes={"total": total},
                        status="ok" if total else "nao_encontrado")
@@ -319,10 +320,11 @@ def _op_listar(p: OuvParams) -> AgentResult:
     if not rows:
         return AgentResult(f"Nenhuma manifestação encontrada com o critério ({_criterio(p)}).", [FONTE_CSV],
                            status="nao_encontrado")
+    no_texto = rows[:5]
     resposta = (f"{plural(total, 'manifestação', 'manifestações')} com o critério ({_criterio(p)}). "
-                f"Mostrando as {len(rows)} mais recentes:\n\n"
+                f"As {len(no_texto)} mais recentes" + (" (lista completa em \"Ver dados\")" if len(rows) > 5 else "") + ":\n\n"
                 + "\n".join(f"- **{r['protocolo']}** ({br_date(r['data_abertura'])}) — {r['categoria']} / "
-                            f"{r['assunto']}, prioridade {r['prioridade']}, status {r['status']}" for r in rows))
+                            f"{r['assunto']}, prioridade {r['prioridade']}, status {r['status']}" for r in no_texto))
     tabela = [{"protocolo": r["protocolo"], "abertura": br_date(r["data_abertura"]), "categoria": r["categoria"],
                "assunto": r["assunto"], "prioridade": r["prioridade"], "status": r["status"]} for r in rows]
     return AgentResult(resposta, [FONTE_CSV], ids_consultados=[r["protocolo"] for r in rows], tabela=tabela)

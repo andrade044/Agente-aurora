@@ -86,7 +86,9 @@ function renderTable(rows) {
   const cols = Object.keys(rows[0]);
   const head = cols.map((c) => `<th>${escapeHtml(c)}</th>`).join("");
   const body = rows.map((r) => `<tr>${cols.map((c) => `<td>${escapeHtml(r[c])}</td>`).join("")}</tr>`).join("");
-  return `<div class="data-table"><table><thead><tr>${head}</tr></thead><tbody>${body}</tbody></table></div>`;
+  const n = rows.length;
+  return `<details class="data-table"><summary>Ver dados (${n} ${n === 1 ? "linha" : "linhas"})</summary>
+    <div class="table-scroll"><table><thead><tr>${head}</tr></thead><tbody>${body}</tbody></table></div></details>`;
 }
 
 function scrollToEnd() {

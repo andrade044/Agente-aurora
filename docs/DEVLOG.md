@@ -169,3 +169,15 @@ Calculado diretamente dos CSV com Python + `Decimal` (script ad hoc, entrada [00
 - **Decisão:** aceita. Evita o mesmo problema para o avaliador se ele abrir versões diferentes do projeto.
 - **Testes / validação:** cabeçalho conferido com `curl -I` (frontend com `no-cache`, API sem); screenshot e cliques sem erros no console; `pytest` 68 passed.
 - **Arquivos afetados:** `app/main.py`, `frontend/index.html`
+
+### [013] 2026-11-07 — Respostas mais enxutas: tabela recolhida em "Ver dados"
+- **Ferramenta:** Claude Opus 5.5 (claude.ai)
+- **Prompt / solicitação:** "Mas é normal quando perguntar mandar esse tanto de tabela?"; aceitou a proposta ("Faz assim").
+- **Diagnóstico:** nas respostas de Financeiro e Ouvidoria os dados apareciam duas vezes, como lista no texto e como tabela logo abaixo.
+- **Resposta / solução proposta:**
+  - Texto com a resposta direta + critério: agrupamentos e orçamento mostram o destaque e o total; execução orçamentária mostra o total e o maior/menor departamento; contagens da ouvidoria mostram o total e o grupo mais frequente.
+  - Quando a lista é a própria resposta (maiores lançamentos, listagem de manifestações), o texto mostra até 5 itens e indica "Ver dados" para o restante.
+  - Tabela recolhida por padrão (`<details>` "Ver dados (N linhas)") no frontend. Versão dos assets atualizada (`?v=12`).
+- **Decisão:** aceita.
+- **Testes / validação:** respostas conferidas via API (orçamento, execução, maiores despesas, contagem e listagem da ouvidoria, agrupamento por categoria); screenshot com tabela fechada e aberta, console sem erros; `pytest` 68 passed (inclui os 12 casos oficiais com os critérios de valor).
+- **Arquivos afetados:** `app/agents/financeiro.py`, `app/agents/ouvidoria.py`, `frontend/app.js`, `frontend/styles.css`, `frontend/index.html`

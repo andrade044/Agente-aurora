@@ -398,9 +398,16 @@ def _op_agrupar(p: FinParams) -> AgentResult:
         destaque = rows[0]
     adj = "menor" if p.ordem == "asc" else "maior"
     resposta = (f"{nome_dim} com {adj} valor é **{destaque['grupo']}**: {brl(destaque['total'])} "
-                f"({plural(destaque['n'], 'lançamento')}).\n\n"
-                + "\n".join(f"- {r['grupo']}: {brl(r['total'])} ({r['n']})" for r in rows)
-                + f"\n\nCritério: {_criterio(p)}.")
+                f"({plural(destaque['n'], 'lançamento')}).")
+    if len(rows) > 1:
+        total = sum(r["total"] for r in rows)
+        plurais = {"departamento": ("departamento", "departamentos"), "categoria": ("categoria", "categorias"),
+                   "status": ("status", "status"), "tipo": ("tipo", "tipos"), "mes": ("mês", "meses"),
+                   "contraparte": ("contraparte", "contrapartes"), "centro_custo": ("centro de custo", "centros de custo"),
+                   "metodo_pagamento": ("método", "métodos")}
+        sing, plur = plurais[dim]
+        resposta += f" Somando {plural(len(rows), sing, plur)}, o total é {brl(total)}."
+    resposta += f"\n\nCritério: {_criterio(p)}."
     tabela = [{nome_dim.split(" ", 1)[1]: r["grupo"], "lançamentos": r["n"], "total": brl(r["total"])} for r in rows]
     return AgentResult(resposta, [FONTE_LANC], tabela=tabela)
 
@@ -416,10 +423,11 @@ def _op_maiores(p: FinParams) -> AgentResult:
         return AgentResult(f"Nenhum lançamento encontrado com o critério: {_criterio(p)}.",
                            [FONTE_LANC], status="nao_encontrado")
     adj = "menores" if p.ordem == "asc" else "maiores"
-    resposta = (f"Os {len(rows)} {adj} lançamentos:\n\n"
+    no_texto = rows[:5]
+    resposta = (f"Os {len(rows)} {adj} lançamentos" + (f" (os 5 primeiros abaixo; todos em \"Ver dados\")" if len(rows) > 5 else "") + ":\n\n"
                 + "\n".join(f"- {r['id_lancamento']} ({br_date(r['data_competencia'])}) — {r['tipo']}, "
                             f"{r['categoria']} / {r['descricao']}, {r['departamento']}: **{brl(r['valor_brl'])}** "
-                            f"[{r['status']}]" for r in rows)
+                            f"[{r['status']}]" for r in no_texto)
                 + f"\n\nCritério: {_criterio(p)}.")
     tabela = [{"id": r["id_lancamento"], "competência": br_date(r["data_competencia"]), "tipo": r["tipo"],
                "categoria": r["categoria"], "departamento": r["departamento"], "valor": brl(r["valor_brl"]),
@@ -449,16 +457,18 @@ def _op_orcamento(p: FinParams) -> AgentResult:
     if not rows:
         return AgentResult(f"Não há orçamento registrado para {periodo}.", [FONTE_ORC], status="nao_encontrado")
     total = sum(r["total"] for r in rows)
-    lista = "\n".join(f"- {r['departamento']} ({r['centro_custo']}): {brl(r['total'])}" for r in rows)
     if p.agrupar_por == "departamento" and len(rows) > 1:
         adj = "menor" if p.ordem == "asc" else "maior"
         top = rows[0]
         empate = [r["departamento"] for r in rows if r["total"] == top["total"]]
         nome = " e ".join(empate)
         resposta = (f"O departamento com {adj} orçamento em {periodo} é **{nome}** ({top['centro_custo']}), "
-                    f"com **{brl(top['total'])}**.\n\n{lista}\n\nTotal orçado no período: {brl(total)}.")
+                    f"com **{brl(top['total'])}**. O total orçado no período é {brl(total)}.")
+    elif len(rows) == 1:
+        resposta = (f"Orçamento aprovado de {rows[0]['departamento']} em {periodo}: **{brl(total)}**.")
     else:
-        resposta = f"Orçamento aprovado em {periodo}: **{brl(total)}**.\n\n{lista}"
+        resposta = (f"Orçamento aprovado em {periodo}: **{brl(total)}**, somando "
+                    f"{plural(len(rows), 'departamento')}.")
     resposta += "\n\nCritério: soma de orcamento_brl por departamento no período (versão Aprovado)."
     tabela = [{"departamento": r["departamento"], "centro de custo": r["centro_custo"], "meses": r["meses"],
                "orçamento": brl(r["total"])} for r in rows]
@@ -484,13 +494,16 @@ def _op_execucao(p: FinParams) -> AgentResult:
     tot_orc = sum(r["orcado"] for r in rows)
     tot_real = sum(r["realizado"] for r in rows)
     periodo = p.period.label() if p.period else "todo o período disponível (2025–2026)"
-    linhas = "\n".join(
-        f"- {r['departamento']}: realizado {brl(r['realizado'])} de {brl(r['orcado'])} orçado → "
-        f"**{pct(r['realizado'] / r['orcado']) if r['orcado'] else 'n/d'}**" for r in rows)
+    com_orc = [r for r in rows if r["orcado"]]
     resposta = (f"Execução orçamentária em {periodo}: **{pct(tot_real / tot_orc) if tot_orc else 'n/d'}** "
-                f"({brl(tot_real)} realizados de {brl(tot_orc)} orçados).\n\n{linhas}\n\n"
-                "Critério: despesas com status Pago por data de competência ÷ orçamento aprovado do mesmo período e "
-                "centro de custo (definição de indicadores_e_regras.json).")
+                f"({brl(tot_real)} realizados de {brl(tot_orc)} orçados).")
+    if len(com_orc) > 1:
+        alto = max(com_orc, key=lambda r: r["realizado"] / r["orcado"])
+        baixo = min(com_orc, key=lambda r: r["realizado"] / r["orcado"])
+        resposta += (f" Maior execução: {alto['departamento']} ({pct(alto['realizado'] / alto['orcado'])}); "
+                     f"menor: {baixo['departamento']} ({pct(baixo['realizado'] / baixo['orcado'])}).")
+    resposta += ("\n\nCritério: despesas com status Pago por data de competência ÷ orçamento aprovado do mesmo "
+                 "período e centro de custo (definição de indicadores_e_regras.json).")
     tabela = [{"departamento": r["departamento"], "orçado": brl(r["orcado"]), "realizado": brl(r["realizado"]),
                "execução": pct(r["realizado"] / r["orcado"]) if r["orcado"] else "n/d"} for r in rows]
     return AgentResult(resposta, [FONTE_LANC, FONTE_ORC, FONTE_REGRAS], tabela=tabela)
